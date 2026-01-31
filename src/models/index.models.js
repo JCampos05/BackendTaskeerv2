@@ -4,7 +4,6 @@ const ZonaHoraria = require('./Zonahoraria')(sequelize);
 const Usuario = require('./Usuario')(sequelize);
 const Tablero = require('./Tablero')(sequelize);
 const TableroCompartido = require('./compartir/Tablerocompartido')(sequelize);
-const Columna = require('./Columna')(sequelize);
 const Lista = require('./Lista')(sequelize);
 const ListaCompartida = require('./compartir/Listacompartida')(sequelize);
 const Tarea = require('./Tarea')(sequelize);
@@ -62,16 +61,6 @@ TableroCompartido.belongsTo(Usuario, {
     as: 'compartidoPorUsuario'
 });
 
-// RELACIONES: Tablero - Columna
-Tablero.hasMany(Columna, {
-    foreignKey: 'idTablero',
-    as: 'columnas'
-});
-Columna.belongsTo(Tablero, {
-    foreignKey: 'idTablero',
-    as: 'tablero'
-});
-
 // RELACIONES: Usuario - Lista
 Usuario.hasMany(Lista, {
     foreignKey: 'idUsuario',
@@ -90,16 +79,6 @@ Tablero.hasMany(Lista, {
 Lista.belongsTo(Tablero, {
     foreignKey: 'idTablero',
     as: 'tablero'
-});
-
-// RELACIONES: Columna - Lista
-Columna.hasMany(Lista, {
-    foreignKey: 'idColumna',
-    as: 'listas'
-});
-Lista.belongsTo(Columna, {
-    foreignKey: 'idColumna',
-    as: 'columna'
 });
 
 // RELACIONES: Lista - ListaCompartida
@@ -209,7 +188,6 @@ module.exports = {
     Usuario,
     Tablero,
     TableroCompartido,
-    Columna,
     Lista,
     ListaCompartida,
     Tarea,

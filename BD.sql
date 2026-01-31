@@ -1,6 +1,7 @@
 -- ============================================
--- TASKEER - Esquema Principal
+-- TASKEER - Esquema Principal Actualizado
 -- Base de datos sin lógica de negocio (se maneja en Express)
+-- CAMBIOS: Eliminada tabla columna, orden movido a tabla lista
 -- ============================================
 
 CREATE DATABASE taskeer2;
@@ -118,30 +119,9 @@ CREATE TABLE tablero_compartido (
 ) ENGINE=InnoDB;
 
 -- ============================================
--- TABLA: columna
--- ============================================
-CREATE TABLE columna (
-    idColumna INT NOT NULL AUTO_INCREMENT,
-    nombre VARCHAR(100) NOT NULL,
-    orden INT NOT NULL DEFAULT 0,
-    color VARCHAR(7) DEFAULT NULL,
-    idTablero INT NOT NULL,
-    fechaCreacion TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    fechaActualizacion TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    PRIMARY KEY (idColumna),
-    KEY idx_columna_tablero (idTablero),
-    KEY idx_columna_orden (idTablero, orden),
-    
-    CONSTRAINT fk_columna_tablero 
-        FOREIGN KEY (idTablero) 
-        REFERENCES tablero (idTablero) 
-        ON DELETE CASCADE 
-        ON UPDATE CASCADE
-) ENGINE=InnoDB;
-
--- ============================================
 -- TABLA: lista
+-- CAMBIO: Agregado campo 'orden' para ordenamiento en tablero
+-- CAMBIO: Eliminada relación con columna (idColumna)
 -- ============================================
 CREATE TABLE lista (
     idLista INT NOT NULL AUTO_INCREMENT,
@@ -149,8 +129,8 @@ CREATE TABLE lista (
     color VARCHAR(7) DEFAULT NULL,
     icono VARCHAR(100) DEFAULT NULL,
     importante BOOLEAN DEFAULT FALSE,
+    orden INT NOT NULL DEFAULT 0,
     idTablero INT DEFAULT NULL,
-    idColumna INT DEFAULT NULL,
     fechaCreacion TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     idUsuario INT NOT NULL,
     compartible BOOLEAN DEFAULT FALSE,
@@ -160,18 +140,13 @@ CREATE TABLE lista (
     PRIMARY KEY (idLista),
     UNIQUE KEY uk_lista_clave (claveCompartir),
     KEY idx_lista_tablero (idTablero),
-    KEY idx_lista_columna (idColumna),
     KEY idx_lista_usuario (idUsuario),
     KEY idx_lista_clave (claveCompartir),
+    KEY idx_lista_orden (idTablero, orden),
     
     CONSTRAINT fk_lista_tablero 
         FOREIGN KEY (idTablero) 
         REFERENCES tablero (idTablero) 
-        ON DELETE SET NULL 
-        ON UPDATE CASCADE,
-    CONSTRAINT fk_lista_columna 
-        FOREIGN KEY (idColumna) 
-        REFERENCES columna (idColumna) 
         ON DELETE SET NULL 
         ON UPDATE CASCADE,
     CONSTRAINT fk_lista_usuario 

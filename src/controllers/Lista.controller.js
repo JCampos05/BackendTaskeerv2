@@ -106,3 +106,19 @@ exports.eliminar = async (req, res) => {
         });
     }
 };
+
+exports.reordenar = async (req, res) => {
+    try {
+        const { idTablero, ordenListas } = req.body;
+        const resultado = await listaService.reordenar(idTablero, ordenListas, req.usuario.idUsuario);
+        res.status(200).json({
+            exito: true,
+            mensaje: resultado.mensaje
+        });
+    } catch (error) {
+        res.status(400).json({
+            exito: false,
+            mensaje: error.message
+        });
+    }
+};

@@ -12,6 +12,7 @@ router.get('/:id', listaController.obtenerPorId);
 router.get('/:id/tareas', listaController.obtenerConTareas);
 
 router.put('/:id', listaController.actualizar);
+router.put('/reordenar', listaController.reordenar);
 router.delete('/:id', listaController.eliminar);
 
 module.exports = router;

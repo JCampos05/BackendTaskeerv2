@@ -1,4 +1,4 @@
-const { Tablero, Columna, Lista, Usuario } = require('../models/index.models');
+const { Tablero, Lista, Usuario } = require('../models/index.models');
 const crypto = require('crypto');
 
 class TableroService {
@@ -33,12 +33,12 @@ class TableroService {
                     attributes: ['idUsuario', 'nombre', 'apellido', 'email']
                 },
                 {
-                    model: Columna,
-                    as: 'columnas',
-                    attributes: ['idColumna', 'nombre', 'color', 'orden'],
-                    order: [['orden', 'ASC']]
+                    model: Lista,
+                    as: 'listas',
+                    attributes: ['idLista', 'nombre', 'color', 'icono', 'orden']
                 }
-            ]
+            ],
+            order: [[{ model: Lista, as: 'listas' }, 'orden', 'ASC']]
         });
 
         if (!tablero) {
@@ -57,14 +57,9 @@ class TableroService {
             where: { idUsuario },
             include: [
                 {
-                    model: Columna,
-                    as: 'columnas',
-                    attributes: ['idColumna', 'nombre']
-                },
-                {
                     model: Lista,
                     as: 'listas',
-                    attributes: ['idLista', 'nombre']
+                    attributes: ['idLista', 'nombre', 'color', 'icono', 'orden']
                 }
             ],
             order: [['fechaCreacion', 'DESC']]
@@ -78,23 +73,24 @@ class TableroService {
             where: { idTablero },
             include: [
                 {
-                    model: Columna,
-                    as: 'columnas',
+                    model: Lista,
+                    as: 'listas',
+                    attributes: ['idLista', 'nombre', 'color', 'icono', 'orden'],
                     include: [
                         {
-                            model: Lista,
-                            as: 'listas',
-                            attributes: ['idLista', 'nombre', 'color', 'icono']
+                            model: Usuario,
+                            as: 'propietario',
+                            attributes: ['idUsuario', 'nombre', 'apellido']
                         }
-                    ],
-                    order: [['orden', 'ASC']]
+                    ]
                 },
                 {
                     model: Usuario,
                     as: 'propietario',
                     attributes: ['idUsuario', 'nombre', 'apellido']
                 }
-            ]
+            ],
+            order: [[{ model: Lista, as: 'listas' }, 'orden', 'ASC']]
         });
 
         if (!tablero) {

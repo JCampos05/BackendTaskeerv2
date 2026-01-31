@@ -27,6 +27,11 @@ module.exports = (sequelize) => {
             allowNull: true,
             defaultValue: false
         },
+        orden: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0
+        },
         idTablero: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -34,15 +39,6 @@ module.exports = (sequelize) => {
             references: {
                 model: 'tablero',
                 key: 'idTablero'
-            }
-        },
-        idColumna: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            defaultValue: null,
-            references: {
-                model: 'columna',
-                key: 'idColumna'
             }
         },
         fechaCreacion: {
@@ -88,16 +84,16 @@ module.exports = (sequelize) => {
                 fields: ['idTablero']
             },
             {
-                name: 'idx_lista_columna',
-                fields: ['idColumna']
-            },
-            {
                 name: 'idx_lista_usuario',
                 fields: ['idUsuario']
             },
             {
                 name: 'idx_lista_clave',
                 fields: ['claveCompartir']
+            },
+            {
+                name: 'idx_lista_orden',
+                fields: ['idTablero', 'orden']
             }
         ]
     });

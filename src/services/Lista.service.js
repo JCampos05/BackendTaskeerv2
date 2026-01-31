@@ -1,8 +1,9 @@
-const { Lista, Tablero, Columna, Tarea, Usuario } = require('../models/index.models');
+const { Lista, Tablero, Tarea, Usuario } = require('../models/index.models');
+const crypto = require('crypto');
 
 class ListaService {
     async crear(datos, idUsuario) {
-        const { nombre, color, icono, importante, idTablero, idColumna, compartible } = datos;
+        const { nombre, color, icono, importante, idTablero, compartible, orden } = datos;
 
         if (idTablero) {
             const tablero = await Tablero.findByPk(idTablero);
@@ -14,11 +15,20 @@ class ListaService {
             }
         }
 
-        if (idColumna) {
-            const columna = await Columna.findByPk(idColumna);
-            if (!columna) {
-                throw new Error('Columna no encontrada');
-            }
+        let ordenFinal = orden;
+        if (idTablero && (ordenFinal === undefined || ordenFinal === null)) {
+            const ultimaLista = await Lista.findOne({
+                where: { idTablero },
+                order: [['orden', 'DESC']]
+            });
+            ordenFinal = ultimaLista ? ultimaLista.orden + 1 : 0;
+        } else if (!idTablero) {
+            ordenFinal = 0;
+        }
+
+        let claveCompartir = null;
+        if (compartible) {
+            claveCompartir = crypto.randomBytes(6).toString('hex');
         }
 
         const nuevaLista = await Lista.create({
@@ -26,10 +36,11 @@ class ListaService {
             color,
             icono,
             importante: importante || false,
+            orden: ordenFinal,
             idTablero,
-            idColumna,
             idUsuario,
-            compartible: compartible || false
+            compartible: compartible || false,
+            claveCompartir
         });
 
         return nuevaLista;
@@ -43,11 +54,6 @@ class ListaService {
                     model: Tablero,
                     as: 'tablero',
                     attributes: ['idTablero', 'nombre', 'color', 'icono']
-                },
-                {
-                    model: Columna,
-                    as: 'columna',
-                    attributes: ['idColumna', 'nombre', 'color']
                 },
                 {
                     model: Usuario,
@@ -76,11 +82,6 @@ class ListaService {
                     model: Tablero,
                     as: 'tablero',
                     attributes: ['idTablero', 'nombre', 'color', 'icono']
-                },
-                {
-                    model: Columna,
-                    as: 'columna',
-                    attributes: ['idColumna', 'nombre']
                 }
             ],
             order: [['importante', 'DESC'], ['fechaCreacion', 'DESC']]
@@ -103,17 +104,12 @@ class ListaService {
             where: { idTablero },
             include: [
                 {
-                    model: Columna,
-                    as: 'columna',
-                    attributes: ['idColumna', 'nombre', 'color']
-                },
-                {
                     model: Tarea,
                     as: 'tareas',
                     attributes: ['idTarea', 'nombre', 'estado', 'prioridad']
                 }
             ],
-            order: [['fechaCreacion', 'ASC']]
+            order: [['orden', 'ASC']]
         });
 
         return listas;
@@ -159,6 +155,14 @@ class ListaService {
             throw new Error('No tienes permiso para actualizar esta lista');
         }
 
+        if (datos.compartible && !lista.claveCompartir) {
+            datos.claveCompartir = crypto.randomBytes(6).toString('hex');
+        }
+
+        if (datos.compartible === false) {
+            datos.claveCompartir = null;
+        }
+
         await lista.update(datos);
         return lista;
     }
@@ -175,6 +179,25 @@ class ListaService {
 
         await lista.destroy();
         return { mensaje: 'Lista eliminada correctamente' };
+    }
+
+    async reordenar(idTablero, ordenListas, idUsuario) {
+        const tablero = await Tablero.findByPk(idTablero);
+        if (!tablero) {
+            throw new Error('Tablero no encontrado');
+        }
+
+        if (tablero.idUsuario !== idUsuario) {
+            throw new Error('No tienes permiso para reordenar listas en este tablero');
+        }
+
+        const promesas = ordenListas.map(({ idLista, orden }) => {
+            return Lista.update({ orden }, { where: { idLista, idTablero } });
+        });
+
+        await Promise.all(promesas);
+
+        return { mensaje: 'Listas reordenadas correctamente' };
     }
 }
 
