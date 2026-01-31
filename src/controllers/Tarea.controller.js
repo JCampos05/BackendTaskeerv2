@@ -1,4 +1,4 @@
-const tareaService = require('../services/tarea.service');
+const tareaService = require('../services/Tarea.service');
 
 exports.crear = async (req, res) => {
     try {
