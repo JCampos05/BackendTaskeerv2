@@ -1,4 +1,4 @@
-const { Tablero, Lista, Usuario } = require('../models/index.models');
+const { Tablero, Lista, Usuario, Tarea } = require('../models/index.models');
 const crypto = require('crypto');
 
 class TableroService {
@@ -59,13 +59,45 @@ class TableroService {
                 {
                     model: Lista,
                     as: 'listas',
-                    attributes: ['idLista', 'nombre', 'color', 'icono', 'orden']
+                    attributes: ['idLista', 'nombre', 'color', 'icono', 'orden', 'importante'],
+                    include: [
+                        {
+                            model: Tarea,
+                            as: 'tareas',
+                            attributes: ['idTarea', 'estado']
+                        }
+                    ]
                 }
             ],
             order: [['fechaCreacion', 'DESC']]
         });
 
-        return tableros;
+        const tablerosConEstadisticas = tableros.map(tablero => {
+            const tableroJSON = tablero.toJSON();
+            
+            const cantidadListas = tableroJSON.listas ? tableroJSON.listas.length : 0;
+            
+            let cantidadTareas = 0;
+            let tareasCompletadas = 0;
+            
+            if (tableroJSON.listas) {
+                tableroJSON.listas.forEach(lista => {
+                    if (lista.tareas) {
+                        cantidadTareas += lista.tareas.length;
+                        tareasCompletadas += lista.tareas.filter(tarea => tarea.estado === 'C').length;
+                    }
+                });
+            }
+            
+            return {
+                ...tableroJSON,
+                cantidadListas,
+                cantidadTareas,
+                tareasCompletadas
+            };
+        });
+
+        return tablerosConEstadisticas;
     }
 
     async obtenerCompleto(idTablero, idUsuario) {
