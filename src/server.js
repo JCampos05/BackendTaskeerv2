@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const morgan = require('morgan');
 require('dotenv').config();
 
 const { sequelize, testConnection } = require('./config/database');
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
 app.get('/', (req, res) => {
     res.json({
@@ -21,6 +23,8 @@ app.get('/', (req, res) => {
     });
 });
 
+app.use('/api', routes);
+
 app.get('/health', (req, res) => {
     res.json({
         estado: 'OK',
@@ -29,18 +33,20 @@ app.get('/health', (req, res) => {
     });
 });
 
-app.use('/api', routes);
 
 const iniciarServidor = async () => {
     try {
+        console.log('-----------------------------------------------');
         await testConnection();
         
         await sequelize.sync({ alter: false });
         console.log('Modelos sincronizados con la base de datos');
         
         app.listen(PORT, () => {
+            console.log('-----------------------------------------------');
             console.log(`Servidor corriendo en puerto ${PORT}`);
             console.log(`Modo: ${process.env.NODE_ENV || 'development'}`);
+            console.log('-----------------------------------------------');
         });
     } catch (error) {
         console.error('Error al iniciar el servidor:', error);
