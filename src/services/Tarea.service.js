@@ -3,8 +3,8 @@ const { Op } = require('sequelize');
 
 class TareaService {
     async crear(datos, idUsuario) {
-        const { nombre, descripcion, prioridad, estado, fechaVencimiento, pasos, notas, 
-                recordatorio, repetir, tipoRepeticion, configRepeticion, idLista, idUsuarioAsignado } = datos;
+        const { nombre, descripcion, prioridad, estado, fechaVencimiento, miDia, pasos, notas,
+            recordatorio, repetir, tipoRepeticion, configRepeticion, idLista, idUsuarioAsignado } = datos;
 
         const lista = await Lista.findByPk(idLista);
         if (!lista) {
@@ -21,6 +21,7 @@ class TareaService {
             prioridad: prioridad || 'N',
             estado: estado || 'N',
             fechaVencimiento,
+            miDia: miDia || false,
             pasos,
             notas,
             recordatorio,

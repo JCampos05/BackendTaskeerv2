@@ -38,6 +38,11 @@ module.exports = (sequelize) => {
             allowNull: true,
             defaultValue: null
         },
+        miDia: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false
+        },
         pasos: {
             type: DataTypes.JSON,
             allowNull: true,

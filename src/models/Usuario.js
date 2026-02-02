@@ -41,6 +41,14 @@ module.exports = (sequelize) => {
                 key: 'idZonaHoraria'
             }
         },
+        idPais: {
+            type: DataTypes.SMALLINT.UNSIGNED,
+            allowNull: true,
+            references: {
+                model: 'paises',
+                key: 'idPais'
+            }
+        },
         cargo: {
             type: DataTypes.STRING(100),
             allowNull: true
@@ -83,6 +91,10 @@ module.exports = (sequelize) => {
             {
                 name: 'idx_usuario_zona_horaria',
                 fields: ['idZonaHoraria']
+            },
+            {
+                name: 'idx_usuario_pais',
+                fields: ['idPais']
             }
         ]
     });

@@ -33,6 +33,7 @@ CREATE TABLE usuario (
     telefono VARCHAR(20) NULL,
     ubicacion VARCHAR(100) NULL,
     idZonaHoraria TINYINT UNSIGNED NULL,
+    idPais SMALLINT UNSIGNED NULL,
     cargo VARCHAR(100) NULL,
     redes_sociales JSON NULL,
     password VARCHAR(255) NOT NULL,
@@ -44,14 +45,20 @@ CREATE TABLE usuario (
     KEY idx_usuario_email (email),
     KEY idx_usuario_ubicacion (ubicacion),
     KEY idx_usuario_zona_horaria (idZonaHoraria),
+    KEY idx_usuario_pais (idPais),
     
     CONSTRAINT fk_usuario_zona_horaria 
         FOREIGN KEY (idZonaHoraria) 
         REFERENCES zonasHorarias (idZonaHoraria) 
         ON DELETE SET NULL 
+        ON UPDATE CASCADE,
+    
+    CONSTRAINT fk_usuario_pais 
+        FOREIGN KEY (idPais) 
+        REFERENCES paises (idPais) 
+        ON DELETE SET NULL 
         ON UPDATE CASCADE
 ) ENGINE=InnoDB;
-
 -- ============================================
 -- TABLA: tablero
 -- ============================================
@@ -206,6 +213,7 @@ CREATE TABLE tarea (
     estado ENUM('C','P','N') DEFAULT 'N' COMMENT 'C=Completada, P=En Progreso, N=No Iniciada',
     fechaCreacion TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     fechaVencimiento DATE DEFAULT NULL,
+    miDia BOOLEAN DEFAULT FALSE,
     pasos JSON DEFAULT NULL,
     notas TEXT,
     recordatorio JSON DEFAULT NULL,
@@ -344,4 +352,19 @@ CREATE TABLE notificaciones (
         REFERENCES usuario (idUsuario) 
         ON DELETE CASCADE 
         ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+
+-- ============================================
+-- TABLA: paises
+-- Catálogo de países con código ISO estándar
+-- ============================================
+CREATE TABLE paises (
+    idPais SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    codigoPais CHAR(2) NOT NULL UNIQUE COMMENT 'ISO 3166-1 alpha-2 (MX, US, ES, etc.)',
+    nombrePais VARCHAR(100) NOT NULL,
+    banderaUrl VARCHAR(255) COMMENT 'URL de la bandera o código emoji',
+    fechaCreado DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fechaActualizado DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_codigoPais (codigoPais)
 ) ENGINE=InnoDB;

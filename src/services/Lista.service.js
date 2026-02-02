@@ -82,12 +82,34 @@ class ListaService {
                     model: Tablero,
                     as: 'tablero',
                     attributes: ['idTablero', 'nombre', 'color', 'icono']
+                },
+                {
+                    model: Tarea,
+                    as: 'tareas',
+                    attributes: ['idTarea', 'estado']
                 }
             ],
             order: [['importante', 'DESC'], ['fechaCreacion', 'DESC']]
         });
 
-        return listas;
+        const listasConEstadisticas = listas.map(lista => {
+            const listaJSON = lista.toJSON();
+            
+            const cantidadTareas = listaJSON.tareas ? listaJSON.tareas.length : 0;
+            const tareasCompletadas = listaJSON.tareas 
+                ? listaJSON.tareas.filter(tarea => tarea.estado === 'C').length 
+                : 0;
+            
+            delete listaJSON.tareas;
+            
+            return {
+                ...listaJSON,
+                cantidadTareas,
+                tareasCompletadas
+            };
+        });
+
+        return listasConEstadisticas;
     }
 
     async obtenerPorTablero(idTablero, idUsuario) {

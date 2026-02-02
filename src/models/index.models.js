@@ -1,6 +1,7 @@
 const { sequelize } = require('../config/database');
 
 const ZonaHoraria = require('./Zonahoraria')(sequelize);
+const Pais = require('./Pais')(sequelize);
 const Usuario = require('./Usuario')(sequelize);
 const Tablero = require('./Tablero')(sequelize);
 const TableroCompartido = require('./compartir/Tablerocompartido')(sequelize);
@@ -19,6 +20,16 @@ ZonaHoraria.hasMany(Usuario, {
 Usuario.belongsTo(ZonaHoraria, {
     foreignKey: 'idZonaHoraria',
     as: 'zonaHoraria'
+});
+
+// RELACIONES: Pais - Usuario
+Pais.hasMany(Usuario, {
+    foreignKey: 'idPais',
+    as: 'usuarios'
+});
+Usuario.belongsTo(Pais, {
+    foreignKey: 'idPais',
+    as: 'pais'
 });
 
 // RELACIONES: Usuario - Tablero
@@ -185,6 +196,7 @@ module.exports = {
     sequelize,
     
     ZonaHoraria,
+    Pais,
     Usuario,
     Tablero,
     TableroCompartido,

@@ -1,10 +1,10 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Usuario, ZonaHoraria } = require('../models/index.models');
+const { Usuario, ZonaHoraria, Pais } = require('../models/index.models');
 
 class UsuarioService {
     async registrar(datos) {
-        const { nombre, apellido, email, password, telefono, ubicacion, idZonaHoraria, cargo, bio } = datos;
+        const { nombre, apellido, email, password, telefono, ubicacion, idZonaHoraria, idPais, cargo, bio } = datos;
 
         const usuarioExistente = await Usuario.findOne({ where: { email } });
         if (usuarioExistente) {
@@ -21,6 +21,7 @@ class UsuarioService {
             telefono,
             ubicacion,
             idZonaHoraria,
+            idPais,
             cargo,
             bio
         });
@@ -32,11 +33,18 @@ class UsuarioService {
     async login(email, password) {
         const usuario = await Usuario.findOne({ 
             where: { email },
-            include: [{
-                model: ZonaHoraria,
-                as: 'zonaHoraria',
-                attributes: ['nombreZona', 'offsetUTC', 'nombreMostrar']
-            }]
+            include: [
+                {
+                    model: ZonaHoraria,
+                    as: 'zonaHoraria',
+                    attributes: ['idZonaHoraria', 'nombreZona', 'offsetUTC', 'nombreMostrar']
+                },
+                {
+                    model: Pais,
+                    as: 'pais',
+                    attributes: ['idPais', 'codigoPais', 'nombrePais', 'banderaUrl']
+                }
+            ]
         });
 
         if (!usuario) {
@@ -69,11 +77,18 @@ class UsuarioService {
     async obtenerPorId(idUsuario) {
         const usuario = await Usuario.findByPk(idUsuario, {
             attributes: { exclude: ['password'] },
-            include: [{
-                model: ZonaHoraria,
-                as: 'zonaHoraria',
-                attributes: ['nombreZona', 'offsetUTC', 'nombreMostrar']
-            }]
+            include: [
+                {
+                    model: ZonaHoraria,
+                    as: 'zonaHoraria',
+                    attributes: ['idZonaHoraria', 'nombreZona', 'offsetUTC', 'nombreMostrar']
+                },
+                {
+                    model: Pais,
+                    as: 'pais',
+                    attributes: ['idPais', 'codigoPais', 'nombrePais', 'banderaUrl']
+                }
+            ]
         });
 
         if (!usuario) {
@@ -86,11 +101,18 @@ class UsuarioService {
     async obtenerTodos() {
         const usuarios = await Usuario.findAll({
             attributes: { exclude: ['password'] },
-            include: [{
-                model: ZonaHoraria,
-                as: 'zonaHoraria',
-                attributes: ['nombreZona', 'offsetUTC', 'nombreMostrar']
-            }]
+            include: [
+                {
+                    model: ZonaHoraria,
+                    as: 'zonaHoraria',
+                    attributes: ['idZonaHoraria', 'nombreZona', 'offsetUTC', 'nombreMostrar']
+                },
+                {
+                    model: Pais,
+                    as: 'pais',
+                    attributes: ['idPais', 'codigoPais', 'nombrePais', 'banderaUrl']
+                }
+            ]
         });
 
         return usuarios;
@@ -110,8 +132,23 @@ class UsuarioService {
 
         await usuario.update(datosActualizables);
 
-        const { password: _, ...usuarioSinPassword } = usuario.toJSON();
-        return usuarioSinPassword;
+        const usuarioActualizado = await Usuario.findByPk(idUsuario, {
+            attributes: { exclude: ['password'] },
+            include: [
+                {
+                    model: ZonaHoraria,
+                    as: 'zonaHoraria',
+                    attributes: ['idZonaHoraria', 'nombreZona', 'offsetUTC', 'nombreMostrar']
+                },
+                {
+                    model: Pais,
+                    as: 'pais',
+                    attributes: ['idPais', 'codigoPais', 'nombrePais', 'banderaUrl']
+                }
+            ]
+        });
+
+        return usuarioActualizado;
     }
 
     async eliminar(idUsuario) {
