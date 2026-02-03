@@ -7,6 +7,7 @@ const listaRoutes = require('./Lista.routes');
 const tableroRoutes = require('./Tablero.routes');
 const paises = require('./Pais.routes');
 const zonaHoraria = require('./Zonahoraria.routes');
+const notificacionRoutes = require('./Notificacion.routes');
 
 router.use('/usuarios', usuarioRoutes);
 router.use('/tareas', tareaRoutes);
@@ -14,5 +15,6 @@ router.use('/listas', listaRoutes);
 router.use('/tableros', tableroRoutes);
 router.use('/paises',paises);
 router.use('/zonas-horarias',zonaHoraria);
+router.use('/notificaciones', notificacionRoutes);
 
 module.exports = router;

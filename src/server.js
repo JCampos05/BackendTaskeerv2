@@ -6,6 +6,7 @@ require('dotenv').config();
 const { sequelize, testConnection } = require('./config/database');
 const models = require('./models/index.models');
 const routes = require('./routes/index.routes');
+const tareasSchedulerService = require('./services/TareasScheduler.service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,7 @@ app.get('/health', (req, res) => {
     res.json({
         estado: 'OK',
         baseDatos: 'Conectada',
+        scheduler: tareasSchedulerService.obtenerEstado(),
         timestamp: new Date().toISOString()
     });
 });
@@ -42,6 +44,8 @@ const iniciarServidor = async () => {
         await sequelize.sync({ alter: false });
         console.log('Modelos sincronizados con la base de datos');
         
+        tareasSchedulerService.iniciar();
+        
         app.listen(PORT, () => {
             console.log('-----------------------------------------------');
             console.log(`Servidor corriendo en puerto ${PORT}`);
@@ -53,6 +57,18 @@ const iniciarServidor = async () => {
         process.exit(1);
     }
 };
+
+process.on('SIGTERM', () => {
+    console.log('SIGTERM recibido, deteniendo scheduler...');
+    tareasSchedulerService.detener();
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('SIGINT recibido, deteniendo scheduler...');
+    tareasSchedulerService.detener();
+    process.exit(0);
+});
 
 iniciarServidor();
 
