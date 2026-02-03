@@ -122,3 +122,19 @@ exports.reordenar = async (req, res) => {
         });
     }
 };
+exports.marcarImportante = async (req, res) => {
+    try {
+        const { importante } = req.body;
+        const lista = await listaService.actualizar(req.params.id, { importante }, req.usuario.idUsuario);
+        res.status(200).json({
+            exito: true,
+            mensaje: importante ? 'Lista marcada como importante' : 'Lista desmarcada como importante',
+            datos: lista
+        });
+    } catch (error) {
+        res.status(400).json({
+            exito: false,
+            mensaje: error.message
+        });
+    }
+};
