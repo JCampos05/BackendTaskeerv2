@@ -107,3 +107,30 @@ exports.generarNuevaClave = async (req, res) => {
         });
     }
 };
+
+// NUEVO: Endpoint para unirse con clave
+exports.unirseConClave = async (req, res) => {
+    try {
+        const { clave } = req.body;
+        
+        if (!clave) {
+            return res.status(400).json({
+                exito: false,
+                mensaje: 'La clave es requerida'
+            });
+        }
+
+        const resultado = await tableroService.unirseConClave(clave, req.usuario.idUsuario);
+        
+        res.status(200).json({
+            exito: true,
+            mensaje: 'Te has unido al tablero exitosamente',
+            datos: resultado
+        });
+    } catch (error) {
+        res.status(400).json({
+            exito: false,
+            mensaje: error.message
+        });
+    }
+};

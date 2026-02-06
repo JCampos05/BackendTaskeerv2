@@ -1,4 +1,4 @@
-const { Lista, Tablero, Tarea, Usuario } = require('../models/index.models');
+const { Lista, Tablero, Tarea, Usuario, ListaCompartida } = require('../models/index.models');
 const crypto = require('crypto');
 
 class ListaService {
@@ -43,6 +43,19 @@ class ListaService {
             claveCompartir
         });
 
+        // NUEVO: Si la lista es compartible, crear registro en lista_compartida para el propietario
+        if (compartible) {
+            await ListaCompartida.create({
+                idLista: nuevaLista.idLista,
+                idUsuario: idUsuario,
+                rol: 'admin',
+                esCreador: true,
+                compartidoPor: idUsuario,
+                aceptado: true,
+                activo: true
+            });
+        }
+
         return nuevaLista;
     }
 
@@ -67,7 +80,11 @@ class ListaService {
             throw new Error('Lista no encontrada');
         }
 
-        if (lista.idUsuario !== idUsuario) {
+        // CAMBIO: Verificar acceso usando el servicio compartido
+        const listaCompartidaService = require('./compartir/ListaCompartida.service');
+        const tieneAcceso = await listaCompartidaService.verificarAcceso(idLista, idUsuario);
+
+        if (!tieneAcceso) {
             throw new Error('No tienes permiso para ver esta lista');
         }
 
@@ -75,8 +92,28 @@ class ListaService {
     }
 
     async obtenerPorUsuario(idUsuario) {
+        // Obtener IDs de listas compartidas donde NO es creador
+        const listasCompartidasIds = await ListaCompartida.findAll({
+            where: {
+                idUsuario,
+                esCreador: false,
+                activo: true
+            },
+            attributes: ['idLista']
+        });
+
+        const idsExcluir = listasCompartidasIds.map(lc => lc.idLista);
+
         const listas = await Lista.findAll({
-            where: { idUsuario },
+            where: {
+                idUsuario,
+                // Excluir listas compartidas donde NO es creador
+                ...(idsExcluir.length > 0 && {
+                    idLista: {
+                        [require('sequelize').Op.notIn]: idsExcluir
+                    }
+                })
+            },
             include: [
                 {
                     model: Tablero,
@@ -94,14 +131,14 @@ class ListaService {
 
         const listasConEstadisticas = listas.map(lista => {
             const listaJSON = lista.toJSON();
-            
+
             const cantidadTareas = listaJSON.tareas ? listaJSON.tareas.length : 0;
-            const tareasCompletadas = listaJSON.tareas 
-                ? listaJSON.tareas.filter(tarea => tarea.estado === 'C').length 
+            const tareasCompletadas = listaJSON.tareas
+                ? listaJSON.tareas.filter(tarea => tarea.estado === 'C').length
                 : 0;
-            
+
             delete listaJSON.tareas;
-            
+
             return {
                 ...listaJSON,
                 cantidadTareas,
@@ -160,7 +197,11 @@ class ListaService {
             throw new Error('Lista no encontrada');
         }
 
-        if (lista.idUsuario !== idUsuario) {
+        // CAMBIO: Verificar acceso usando el servicio compartido
+        const listaCompartidaService = require('./compartir/ListaCompartida.service');
+        const tieneAcceso = await listaCompartidaService.verificarAcceso(idLista, idUsuario);
+
+        if (!tieneAcceso) {
             throw new Error('No tienes permiso para ver esta lista');
         }
 
@@ -173,16 +214,54 @@ class ListaService {
             throw new Error('Lista no encontrada');
         }
 
-        if (lista.idUsuario !== idUsuario) {
+        // CAMBIO: Verificar permisos usando el servicio compartido
+        const listaCompartidaService = require('./compartir/ListaCompartida.service');
+        const permisos = await listaCompartidaService.obtenerPermisos(idLista, idUsuario);
+
+        if (!permisos.permisos.editar) {
             throw new Error('No tienes permiso para actualizar esta lista');
         }
 
+        // Si se está activando compartible y no tiene clave
         if (datos.compartible && !lista.claveCompartir) {
             datos.claveCompartir = crypto.randomBytes(6).toString('hex');
+
+            // NUEVO: Crear registro en lista_compartida si no existe
+            const compartidoExiste = await ListaCompartida.findOne({
+                where: {
+                    idLista,
+                    idUsuario,
+                    esCreador: true
+                }
+            });
+
+            if (!compartidoExiste) {
+                await ListaCompartida.create({
+                    idLista,
+                    idUsuario,
+                    rol: 'admin',
+                    esCreador: true,
+                    compartidoPor: idUsuario,
+                    aceptado: true,
+                    activo: true
+                });
+            }
         }
 
+        // Si se está desactivando compartible
         if (datos.compartible === false) {
             datos.claveCompartir = null;
+
+            // NUEVO: Desactivar todos los registros compartidos excepto el del creador
+            await ListaCompartida.update(
+                { activo: false },
+                {
+                    where: {
+                        idLista,
+                        esCreador: false
+                    }
+                }
+            );
         }
 
         await lista.update(datos);
@@ -195,8 +274,9 @@ class ListaService {
             throw new Error('Lista no encontrada');
         }
 
+        // CAMBIO: Solo el propietario puede eliminar
         if (lista.idUsuario !== idUsuario) {
-            throw new Error('No tienes permiso para eliminar esta lista');
+            throw new Error('Solo el propietario puede eliminar esta lista');
         }
 
         await lista.destroy();
@@ -220,6 +300,73 @@ class ListaService {
         await Promise.all(promesas);
 
         return { mensaje: 'Listas reordenadas correctamente' };
+    }
+
+    // NUEVO: Método para unirse a una lista con clave
+    async unirseConClave(claveCompartir, idUsuario) {
+        const lista = await Lista.findOne({
+            where: { claveCompartir },
+            include: [
+                {
+                    model: Usuario,
+                    as: 'propietario',
+                    attributes: ['idUsuario', 'nombre', 'apellido']
+                },
+                {
+                    model: Tablero,
+                    as: 'tablero',
+                    attributes: ['idTablero', 'nombre']
+                }
+            ]
+        });
+
+        if (!lista) {
+            throw new Error('Clave de acceso inválida');
+        }
+
+        if (!lista.compartible) {
+            throw new Error('Esta lista no está habilitada para compartir');
+        }
+
+        if (lista.idUsuario === idUsuario) {
+            throw new Error('No puedes unirte a tu propia lista');
+        }
+
+        // Verificar si ya está compartida
+        const yaCompartida = await ListaCompartida.findOne({
+            where: {
+                idLista: lista.idLista,
+                idUsuario,
+                activo: true
+            }
+        });
+
+        if (yaCompartida) {
+            throw new Error('Ya eres miembro de esta lista');
+        }
+
+        // Crear registro en lista_compartida
+        const nuevoCompartido = await ListaCompartida.create({
+            idLista: lista.idLista,
+            idUsuario,
+            rol: 'colaborador',
+            esCreador: false,
+            compartidoPor: lista.idUsuario,
+            aceptado: true,
+            activo: true
+        });
+
+        return {
+            compartido: nuevoCompartido,
+            lista: {
+                idLista: lista.idLista,
+                nombre: lista.nombre,
+                color: lista.color,
+                icono: lista.icono,
+                propietario: lista.propietario,
+                tablero: lista.tablero
+            }
+        };
     }
 }
 

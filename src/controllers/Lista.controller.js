@@ -122,6 +122,7 @@ exports.reordenar = async (req, res) => {
         });
     }
 };
+
 exports.marcarImportante = async (req, res) => {
     try {
         const { importante } = req.body;
@@ -130,6 +131,33 @@ exports.marcarImportante = async (req, res) => {
             exito: true,
             mensaje: importante ? 'Lista marcada como importante' : 'Lista desmarcada como importante',
             datos: lista
+        });
+    } catch (error) {
+        res.status(400).json({
+            exito: false,
+            mensaje: error.message
+        });
+    }
+};
+
+// NUEVO: Endpoint para unirse con clave
+exports.unirseConClave = async (req, res) => {
+    try {
+        const { clave } = req.body;
+        
+        if (!clave) {
+            return res.status(400).json({
+                exito: false,
+                mensaje: 'La clave es requerida'
+            });
+        }
+
+        const resultado = await listaService.unirseConClave(clave, req.usuario.idUsuario);
+        
+        res.status(200).json({
+            exito: true,
+            mensaje: 'Te has unido a la lista exitosamente',
+            datos: resultado
         });
     } catch (error) {
         res.status(400).json({
