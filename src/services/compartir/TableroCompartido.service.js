@@ -114,6 +114,15 @@ class TableroCompartidoService {
 
         sseService.enviarNotificacion(idUsuarioColaborador, notificacion);
 
+        // NUEVO: Enviar evento de cambio de permisos
+        sseService.enviarCambioPermisos(idUsuarioColaborador, {
+            tipo: 'tablero',
+            idRecurso: idTablero,
+            nombreRecurso: tablero.nombre,
+            nuevoRol: nuevoRol,
+            accion: 'rol_actualizado'
+        });
+
         return compartido;
     }
 
@@ -184,6 +193,14 @@ class TableroCompartidoService {
         });
 
         sseService.enviarNotificacion(idUsuarioColaborador, notificacion);
+
+        // NUEVO: Enviar evento de acceso removido
+        sseService.enviarAccesoRemovido(idUsuarioColaborador, {
+            tipo: 'tablero',
+            idRecurso: idTablero,
+            nombreRecurso: tablero.nombre,
+            accion: 'acceso_removido'
+        });
 
         return { mensaje: 'Colaborador removido correctamente' };
     }
@@ -410,7 +427,7 @@ class TableroCompartidoService {
                 leer: true,
                 crear: false,
                 editar: true,
-                eliminar: false,
+                eliminar: true,
                 compartir: false,
                 administrar: false
             },

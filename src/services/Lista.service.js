@@ -274,9 +274,13 @@ class ListaService {
             throw new Error('Lista no encontrada');
         }
 
-        // CAMBIO: Solo el propietario puede eliminar
-        if (lista.idUsuario !== idUsuario) {
-            throw new Error('Solo el propietario puede eliminar esta lista');
+        // CAMBIO: Verificar permisos usando el servicio compartido
+        const listaCompartidaService = require('./compartir/ListaCompartida.service');
+        const permisos = await listaCompartidaService.obtenerPermisos(idLista, idUsuario);
+
+        // Validar permiso de eliminar (propietario, admin, colaborador, editor)
+        if (!permisos.permisos.eliminar) {
+            throw new Error('No tienes permiso para eliminar esta lista');
         }
 
         await lista.destroy();

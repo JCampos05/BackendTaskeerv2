@@ -77,6 +77,14 @@ class SSEService {
         return this.enviarEvento(idUsuario, 'tarea_repetida', tarea);
     }
 
+    enviarCambioPermisos(idUsuario, datos) {
+        return this.enviarEvento(idUsuario, 'cambio_permisos', datos);
+    }
+
+    enviarAccesoRemovido(idUsuario, datos) {
+        return this.enviarEvento(idUsuario, 'acceso_removido', datos);
+    }
+
     enviarPing(idUsuario) {
         return this.enviarEvento(idUsuario, 'ping', { timestamp: new Date().toISOString() });
     }

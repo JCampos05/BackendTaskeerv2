@@ -96,6 +96,15 @@ class ListaCompartidaService {
 
         sseService.enviarNotificacion(idUsuarioColaborador, notificacion);
 
+        // NUEVO: Enviar evento de cambio de permisos
+        sseService.enviarCambioPermisos(idUsuarioColaborador, {
+            tipo: 'lista',
+            idRecurso: idLista,
+            nombreRecurso: lista.nombre,
+            nuevoRol: nuevoRol,
+            accion: 'rol_actualizado'
+        });
+
         return compartido;
     }
 
@@ -149,6 +158,14 @@ class ListaCompartidaService {
         });
 
         sseService.enviarNotificacion(idUsuarioColaborador, notificacion);
+
+        // NUEVO: Enviar evento de acceso removido
+        sseService.enviarAccesoRemovido(idUsuarioColaborador, {
+            tipo: 'lista',
+            idRecurso: idLista,
+            nombreRecurso: lista.nombre,
+            accion: 'acceso_removido'
+        });
 
         return { mensaje: 'Colaborador removido correctamente' };
     }
@@ -319,7 +336,7 @@ class ListaCompartidaService {
                         leer: true,
                         crear: false,
                         editar: true,
-                        eliminar: false,
+                        eliminar: true,
                         compartir: false,
                         administrar: false
                     },
@@ -387,7 +404,7 @@ class ListaCompartidaService {
                 leer: true,
                 crear: false,
                 editar: true,
-                eliminar: false,
+                eliminar: true,
                 compartir: false,
                 administrar: false
             },

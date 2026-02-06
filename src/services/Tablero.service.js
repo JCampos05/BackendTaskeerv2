@@ -190,7 +190,11 @@ class TableroService {
             throw new Error('Tablero no encontrado');
         }
 
-        if (tablero.idUsuario !== idUsuario) {
+        // CAMBIO: Verificar permisos usando el servicio compartido
+        const tableroCompartidoService = require('./compartir/TableroCompartido.service');
+        const permisos = await tableroCompartidoService.obtenerPermisos(idTablero, idUsuario);
+
+        if (!permisos.permisos.editar) {
             throw new Error('No tienes permiso para actualizar este tablero');
         }
 
@@ -246,7 +250,12 @@ class TableroService {
             throw new Error('Tablero no encontrado');
         }
 
-        if (tablero.idUsuario !== idUsuario) {
+        // CAMBIO: Verificar permisos usando el servicio compartido
+        const tableroCompartidoService = require('./compartir/TableroCompartido.service');
+        const permisos = await tableroCompartidoService.obtenerPermisos(idTablero, idUsuario);
+
+        // Validar permiso de eliminar (propietario, admin, colaborador, editor)
+        if (!permisos.permisos.eliminar) {
             throw new Error('No tienes permiso para eliminar este tablero');
         }
 
