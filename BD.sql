@@ -22,6 +22,20 @@ CREATE TABLE zonasHorarias (
 ) ENGINE=InnoDB;
 
 -- ============================================
+-- TABLA: paises
+-- Catálogo de países con código ISO estándar
+-- ============================================
+CREATE TABLE paises (
+    idPais SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    codigoPais CHAR(2) NOT NULL UNIQUE COMMENT 'ISO 3166-1 alpha-2 (MX, US, ES, etc.)',
+    nombrePais VARCHAR(100) NOT NULL,
+    banderaUrl VARCHAR(255) COMMENT 'URL de la bandera o código emoji',
+    fechaCreado DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fechaActualizado DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_codigoPais (codigoPais)
+) ENGINE=InnoDB;
+
+-- ============================================
 -- TABLA: usuario
 -- ============================================
 CREATE TABLE usuario (
@@ -355,16 +369,3 @@ CREATE TABLE notificaciones (
 ) ENGINE=InnoDB;
 
 
--- ============================================
--- TABLA: paises
--- Catálogo de países con código ISO estándar
--- ============================================
-CREATE TABLE paises (
-    idPais SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    codigoPais CHAR(2) NOT NULL UNIQUE COMMENT 'ISO 3166-1 alpha-2 (MX, US, ES, etc.)',
-    nombrePais VARCHAR(100) NOT NULL,
-    banderaUrl VARCHAR(255) COMMENT 'URL de la bandera o código emoji',
-    fechaCreado DATETIME DEFAULT CURRENT_TIMESTAMP,
-    fechaActualizado DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_codigoPais (codigoPais)
-) ENGINE=InnoDB;

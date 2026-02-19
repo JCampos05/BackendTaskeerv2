@@ -4,7 +4,16 @@ const sseService = require('../SSE.service');
 
 class ListaCompartidaService {
     async obtenerColaboradores(idLista, idUsuario) {
-        const lista = await Lista.findByPk(idLista);
+        const lista = await Lista.findByPk(idLista, {
+            include: [
+                {
+                    model: Tablero,
+                    as: 'tablero',
+                    attributes: ['idTablero', 'nombre', 'compartible']
+                }
+            ]
+        });
+        
         if (!lista) {
             throw new Error('Lista no encontrada');
         }
@@ -38,9 +47,29 @@ class ListaCompartidaService {
             attributes: ['idUsuario', 'nombre', 'apellido', 'email']
         });
 
+        const permisos = await this.obtenerPermisos(idLista, idUsuario);
+        
+        const rolUsuarioActual = colaboradores.find(c => c.idUsuario === idUsuario);
+
         return {
             propietario,
-            colaboradores
+            colaboradores,
+            infoLista: {
+                idLista: lista.idLista,
+                nombre: lista.nombre,
+                compartible: lista.compartible,
+                claveCompartir: lista.claveCompartir,
+                idTablero: lista.idTablero,
+                tablero: lista.tablero
+            },
+            usuarioActual: {
+                idUsuario: idUsuario,
+                esOwner: permisos.esOwner,
+                rol: permisos.rol,
+                permisos: permisos.permisos,
+                esColaborador: !!rolUsuarioActual,
+                datosColaboracion: rolUsuarioActual || null
+            }
         };
     }
 
@@ -96,8 +125,7 @@ class ListaCompartidaService {
 
         sseService.enviarNotificacion(idUsuarioColaborador, notificacion);
 
-        // NUEVO: Enviar evento de cambio de permisos
-        sseService.enviarCambioPermisos(idUsuarioColaborador, {
+        sseService.enviarCambioRolLista(idUsuarioColaborador, {
             tipo: 'lista',
             idRecurso: idLista,
             nombreRecurso: lista.nombre,
@@ -159,7 +187,6 @@ class ListaCompartidaService {
 
         sseService.enviarNotificacion(idUsuarioColaborador, notificacion);
 
-        // NUEVO: Enviar evento de acceso removido
         sseService.enviarAccesoRemovido(idUsuarioColaborador, {
             tipo: 'lista',
             idRecurso: idLista,
@@ -281,6 +308,7 @@ class ListaCompartidaService {
             throw new Error('Lista no encontrada');
         }
 
+        // 1. Verificar si es propietario de la lista
         if (lista.idUsuario === idUsuario) {
             return {
                 esOwner: true,
@@ -292,10 +320,12 @@ class ListaCompartidaService {
                     eliminar: true,
                     compartir: true,
                     administrar: true
-                }
+                },
+                origen: 'propietario_lista'
             };
         }
 
+        // 2. Verificar si es propietario del tablero (si la lista pertenece a un tablero)
         if (lista.idTablero) {
             const tablero = await Tablero.findByPk(lista.idTablero);
             if (tablero && tablero.idUsuario === idUsuario) {
@@ -309,65 +339,14 @@ class ListaCompartidaService {
                         eliminar: true,
                         compartir: true,
                         administrar: true
-                    }
-                };
-            }
-
-            const tableroCompartido = await TableroCompartido.findOne({
-                where: {
-                    idTablero: lista.idTablero,
-                    idUsuario,
-                    activo: true,
-                    aceptado: true
-                }
-            });
-
-            if (tableroCompartido) {
-                const permisosPorRol = {
-                    visor: {
-                        leer: true,
-                        crear: false,
-                        editar: false,
-                        eliminar: false,
-                        compartir: false,
-                        administrar: false
                     },
-                    editor: {
-                        leer: true,
-                        crear: false,
-                        editar: true,
-                        eliminar: true,
-                        compartir: false,
-                        administrar: false
-                    },
-                    colaborador: {
-                        leer: true,
-                        crear: true,
-                        editar: true,
-                        eliminar: true,
-                        compartir: false,
-                        administrar: false
-                    },
-                    admin: {
-                        leer: true,
-                        crear: true,
-                        editar: true,
-                        eliminar: true,
-                        compartir: true,
-                        administrar: true
-                    }
-                };
-
-                return {
-                    esOwner: false,
-                    rol: tableroCompartido.rol,
-                    permisos: permisosPorRol[tableroCompartido.rol],
-                    origen: 'tablero'
+                    origen: 'propietario_tablero'
                 };
             }
         }
 
-        const compartido = await ListaCompartida.findOne({
+        // 3. PRIORIDAD: Buscar permisos específicos de la lista primero
+        const compartidoLista = await ListaCompartida.findOne({
             where: {
                 idLista,
                 idUsuario,
@@ -375,21 +354,6 @@ class ListaCompartidaService {
                 aceptado: true
             }
         });
-
-        if (!compartido) {
-            return {
-                esOwner: false,
-                rol: null,
-                permisos: {
-                    leer: false,
-                    crear: false,
-                    editar: false,
-                    eliminar: false,
-                    compartir: false,
-                    administrar: false
-                }
-            };
-        }
 
         const permisosPorRol = {
             visor: {
@@ -426,19 +390,84 @@ class ListaCompartidaService {
             }
         };
 
+        // Si tiene permisos específicos de lista, usarlos
+        if (compartidoLista) {
+            return {
+                esOwner: false,
+                rol: compartidoLista.rol,
+                permisos: permisosPorRol[compartidoLista.rol],
+                origen: 'lista'
+            };
+        }
+
+        // 4. FALLBACK: Si no tiene permisos de lista pero la lista pertenece a un tablero compartido
+        if (lista.idTablero) {
+            const tableroCompartido = await TableroCompartido.findOne({
+                where: {
+                    idTablero: lista.idTablero,
+                    idUsuario,
+                    activo: true,
+                    aceptado: true
+                }
+            });
+
+            if (tableroCompartido) {
+                return {
+                    esOwner: false,
+                    rol: tableroCompartido.rol,
+                    permisos: permisosPorRol[tableroCompartido.rol],
+                    origen: 'tablero'
+                };
+            }
+        }
+
+        // 5. Sin acceso
         return {
             esOwner: false,
-            rol: compartido.rol,
-            permisos: permisosPorRol[compartido.rol],
-            origen: 'lista'
+            rol: null,
+            permisos: {
+                leer: false,
+                crear: false,
+                editar: false,
+                eliminar: false,
+                compartir: false,
+                administrar: false
+            },
+            origen: 'sin_acceso'
         };
     }
 
     async obtenerListasCompartiendose(idUsuario) {
-        const listas = await Lista.findAll({
-            where: { 
+        const { Op } = require('sequelize');
+        
+        // Obtener IDs de listas donde el usuario es creador en lista_compartida
+        const listasComoCreador = await ListaCompartida.findAll({
+            where: {
                 idUsuario,
-                compartible: true
+                esCreador: true,
+                activo: true
+            },
+            attributes: ['idLista']
+        });
+        
+        const idsListasCreador = listasComoCreador.map(lc => lc.idLista);
+        
+        // Buscar listas donde:
+        // 1. El usuario es propietario Y la lista es compartible
+        // 2. O el usuario es creador en lista_compartida (para listas de tableros compartidos)
+        const listas = await Lista.findAll({
+            where: {
+                [Op.or]: [
+                    {
+                        idUsuario,
+                        compartible: true
+                    },
+                    {
+                        idLista: {
+                            [Op.in]: idsListasCreador.length > 0 ? idsListasCreador : [0]
+                        }
+                    }
+                ]
             },
             include: [
                 {

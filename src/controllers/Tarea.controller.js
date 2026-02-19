@@ -114,3 +114,20 @@ exports.cambiarEstado = async (req, res) => {
         });
     }
 };
+
+// Obtener usuarios asignables en una lista compartida
+exports.obtenerUsuariosAsignables = async (req, res) => {
+    try {
+        const { idLista } = req.params;
+        const usuarios = await tareaService.obtenerUsuariosAsignables(idLista, req.usuario.idUsuario);
+        res.status(200).json({
+            exito: true,
+            datos: usuarios
+        });
+    } catch (error) {
+        res.status(400).json({
+            exito: false,
+            mensaje: error.message
+        });
+    }
+};

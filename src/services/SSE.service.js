@@ -85,6 +85,14 @@ class SSEService {
         return this.enviarEvento(idUsuario, 'acceso_removido', datos);
     }
 
+    enviarCambioRolLista(idUsuario, datos) {
+        return this.enviarEvento(idUsuario, 'cambio_rol_lista', datos);
+    }
+
+    enviarTareaAsignada(idUsuario, datos) {
+        return this.enviarEvento(idUsuario, 'tarea_asignada', datos);
+    }
+
     enviarPing(idUsuario) {
         return this.enviarEvento(idUsuario, 'ping', { timestamp: new Date().toISOString() });
     }

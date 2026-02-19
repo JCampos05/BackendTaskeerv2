@@ -10,8 +10,16 @@ class ListaService {
             if (!tablero) {
                 throw new Error('Tablero no encontrado');
             }
-            if (tablero.idUsuario !== idUsuario) {
-                throw new Error('No tienes permiso para agregar listas a este tablero');
+            
+            const esOwner = tablero.idUsuario === idUsuario;
+            
+            if (!esOwner) {
+                const tableroCompartidoService = require('./compartir/TableroCompartido.service');
+                const permisos = await tableroCompartidoService.obtenerPermisos(idTablero, idUsuario);
+                
+                if (!permisos.permisos.crear) {
+                    throw new Error('No tienes permiso para agregar listas a este tablero');
+                }
             }
         }
 
@@ -26,8 +34,19 @@ class ListaService {
             ordenFinal = 0;
         }
 
+        // NUEVO: Si la lista pertenece a un tablero, verificar si el tablero es compartible
+        let compartibleFinal = compartible || false;
         let claveCompartir = null;
-        if (compartible) {
+        
+        if (idTablero) {
+            const tablero = await Tablero.findByPk(idTablero);
+            if (tablero && tablero.compartible) {
+                // Si el tablero es compartible, la lista también debe serlo automáticamente
+                compartibleFinal = true;
+            }
+        }
+        
+        if (compartibleFinal) {
             claveCompartir = crypto.randomBytes(6).toString('hex');
         }
 
@@ -39,12 +58,12 @@ class ListaService {
             orden: ordenFinal,
             idTablero,
             idUsuario,
-            compartible: compartible || false,
+            compartible: compartibleFinal,
             claveCompartir
         });
 
         // NUEVO: Si la lista es compartible, crear registro en lista_compartida para el propietario
-        if (compartible) {
+        if (compartibleFinal) {
             await ListaCompartida.create({
                 idLista: nuevaLista.idLista,
                 idUsuario: idUsuario,
@@ -54,6 +73,33 @@ class ListaService {
                 aceptado: true,
                 activo: true
             });
+        }
+
+        // NUEVO: Si la lista pertenece a un tablero compartido, compartirla con los colaboradores
+        if (idTablero && compartibleFinal) {
+            const TableroCompartido = require('../models/index.models').TableroCompartido;
+            const colaboradores = await TableroCompartido.findAll({
+                where: {
+                    idTablero,
+                    activo: true,
+                    aceptado: true,
+                    idUsuario: {
+                        [require('sequelize').Op.ne]: idUsuario // Excluir al creador de la lista
+                    }
+                }
+            });
+
+            for (const colaborador of colaboradores) {
+                await ListaCompartida.create({
+                    idLista: nuevaLista.idLista,
+                    idUsuario: colaborador.idUsuario,
+                    rol: colaborador.rol,
+                    esCreador: false, // Los colaboradores del tablero NO son creadores de la lista
+                    compartidoPor: idUsuario,
+                    aceptado: true,
+                    activo: true
+                });
+            }
         }
 
         return nuevaLista;
@@ -155,8 +201,15 @@ class ListaService {
             throw new Error('Tablero no encontrado');
         }
 
-        if (tablero.idUsuario !== idUsuario) {
-            throw new Error('No tienes permiso para ver las listas de este tablero');
+        const esOwner = tablero.idUsuario === idUsuario;
+        
+        if (!esOwner) {
+            const tableroCompartidoService = require('./compartir/TableroCompartido.service');
+            const permisos = await tableroCompartidoService.obtenerPermisos(idTablero, idUsuario);
+            
+            if (!permisos.permisos.leer) {
+                throw new Error('No tienes permiso para ver las listas de este tablero');
+            }
         }
 
         const listas = await Lista.findAll({
@@ -293,8 +346,15 @@ class ListaService {
             throw new Error('Tablero no encontrado');
         }
 
-        if (tablero.idUsuario !== idUsuario) {
-            throw new Error('No tienes permiso para reordenar listas en este tablero');
+        const esOwner = tablero.idUsuario === idUsuario;
+        
+        if (!esOwner) {
+            const tableroCompartidoService = require('./compartir/TableroCompartido.service');
+            const permisos = await tableroCompartidoService.obtenerPermisos(idTablero, idUsuario);
+            
+            if (!permisos.permisos.editar) {
+                throw new Error('No tienes permiso para reordenar listas en este tablero');
+            }
         }
 
         const promesas = ordenListas.map(({ idLista, orden }) => {
